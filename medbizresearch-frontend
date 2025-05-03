@@ -1,0 +1,177 @@
+medbizresearch-frontend/
+├── public/
+│   └── index.html
+├── src/
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── components/
+│       └── ui/
+│           └── button.jsx
+├── tailwind.config.js
+├── postcss.config.js
+├── package.json
+├── vite.config.js
+└── README.md
+{
+  "name": "medbizresearch-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.0",
+    "vite": "^5.0.0"
+  }
+}
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+module.exports = {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+export function Button({ className = "", children, ...props }) {
+  return (
+    <button
+      className={`px-4 py-2 rounded-2xl font-medium shadow ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+export default function MedBizResearch() {
+  const [showTrialMessage, setShowTrialMessage] = useState(false);
+
+  function handleMpesaPayment(phone, amount) {
+    fetch("https://medbizresearch-backend.onrender.com/api/mpesa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, amount }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        alert("Payment initiated. Check your phone to complete it.");
+        setShowTrialMessage(true);
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Payment failed to initiate.");
+      });
+  }
+
+  function handlePaypalPayment() {
+    window.open("https://www.paypal.com/paypalme/samuelokari8", "_blank");
+    setShowTrialMessage(true);
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white font-sans">
+      {/* Header */}
+      <header className="bg-gray-800 shadow p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-teal-400">MedBizResearch</h1>
+        <nav className="space-x-4">
+          <a href="#products" className="text-white hover:text-teal-400">Products</a>
+          <a href="#contact" className="text-white hover:text-teal-400">Contact</a>
+        </nav>
+      </header>
+
+      {/* Hero */}
+      <section className="text-center py-16 bg-gradient-to-r from-teal-500 to-indigo-600 bg-cover bg-center" style={{ backgroundImage: "url('https://source.unsplash.com/featured/?technology,books')" }}>
+        <h2 className="text-4xl font-bold mb-4 text-white drop-shadow">Unlock Knowledge in Medicine, Business & Research</h2>
+        <p className="text-lg mb-6 text-white">Start with a one-month free trial after your first purchase.</p>
+        <Button className="text-white bg-teal-600 hover:bg-teal-700">Explore Resources</Button>
+      </section>
+
+      {/* Trial Message */}
+      {showTrialMessage && (
+        <div className="text-center bg-green-700 text-white py-4">
+          🎉 Welcome! You've unlocked a 1-month free trial to access exclusive content.
+        </div>
+      )}
+
+      {/* Products */}
+      <section id="products" className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { title: "Medical Case Study", price: "$19", paypalAmount: 19, mpesaAmount: 1900 },
+          { title: "Business Plan Template", price: "$29", paypalAmount: 29, mpesaAmount: 2900 },
+          { title: "Research Proposal Sample", price: "$15", paypalAmount: 15, mpesaAmount: 1500 },
+        ].map((item, index) => (
+          <div key={index} className="bg-gray-800 rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-semibold mb-2 text-teal-300">{item.title}</h3>
+            <p className="mb-4 text-gray-300">{item.price}</p>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white mb-2"
+              onClick={handlePaypalPayment}
+            >
+              Pay with PayPal
+            </Button>
+            <Button
+              className="bg-yellow-500 hover:bg-yellow-600 text-white"
+              onClick={() => handleMpesaPayment("0703235253", item.mpesaAmount)}
+            >
+              Pay via M-Pesa
+            </Button>
+          </div>
+        ))}
+      </section>
+
+      {/* Contact */}
+      <section id="contact" className="bg-gray-800 p-8 mt-8 rounded-t-2xl">
+        <h2 className="text-2xl font-bold mb-4 text-teal-300">Contact Us</h2>
+        <p className="text-gray-300">Email: support@medbizresearch.com</p>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 p-4 text-center mt-8 text-gray-400">
+        <p className="text-sm">&copy; 2025 MedBizResearch. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedBizResearch</title>
+  </head>
+  <body class="bg-gray-900">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
