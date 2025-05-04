@@ -1,6 +1,160 @@
-git init
-git add .
-git commit -m "Initial commit for MedBizResearch fullstack app"
-git remote add origin https://github.com/your-username/medbizresearch.git
-git branch -M main
-git push -u origin main
+// === CANVAS ===
+// This section holds shared context and code for MedBizResearch frontend and backend.
+// React (Frontend) and Express (Backend) are designed to operate together.
+// Note: .env configuration required for backend API keys (Daraja).
+
+// --- FRONTEND (React Component) ---
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+export default function MedBizResearch() {
+  const [showTrialMessage, setShowTrialMessage] = useState(false);
+  const [paid, setPaid] = useState(false);
+
+  function handleMpesaPayment(phone, amount) {
+    fetch("https://medbizresearch-backend.onrender.com/api/mpesa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, amount }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        alert("Payment initiated. Check your phone to complete it.");
+        setShowTrialMessage(true);
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Payment failed to initiate.");
+      });
+  }
+
+  function handlePaypalPayment(amount) {
+    window.open(`https://www.paypal.com/paypalme/samuelokari8/${amount}`, "_blank");
+    setPaid(true);
+    setShowTrialMessage(true);
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white font-sans">
+      <header className="bg-gray-800 shadow p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-teal-400">MedBizResearch</h1>
+        <nav className="space-x-4">
+          <a href="#products" className="text-white hover:text-teal-400">Products</a>
+          <a href="#contact" className="text-white hover:text-teal-400">Contact</a>
+        </nav>
+      </header>
+
+      <section className="text-center py-16 bg-gradient-to-r from-teal-500 to-indigo-600 bg-cover bg-center" style={{ backgroundImage: "url('https://source.unsplash.com/featured/?technology,books')" }}>
+        <h2 className="text-4xl font-bold mb-4 text-white drop-shadow">Unlock Knowledge in Medicine, Business & Research</h2>
+        <p className="text-lg mb-6 text-white">Start with a one-month free trial after your first purchase.</p>
+        <Button className="text-white bg-teal-600 hover:bg-teal-700">Explore Resources</Button>
+      </section>
+
+      {showTrialMessage && (
+        <div className="text-center bg-green-700 text-white py-4">
+          🎉 Welcome! You've unlocked a 1-month free trial to access exclusive content.
+        </div>
+      )}
+
+      {paid && (
+        <div className="text-center bg-green-800 text-white py-4">
+          🎉 Thank you for your PayPal payment! We’ll contact you shortly to complete your access.
+        </div>
+      )}
+
+      <section id="products" className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { title: "Medical Case Study", price: "$19", paypalAmount: 19, mpesaAmount: 1900 },
+          { title: "Business Plan Template", price: "$29", paypalAmount: 29, mpesaAmount: 2900 },
+          { title: "Research Proposal Sample", price: "$15", paypalAmount: 15, mpesaAmount: 1500 },
+        ].map((item, index) => (
+          <div key={index} className="bg-gray-800 rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-semibold mb-2 text-teal-300">{item.title}</h3>
+            <p className="mb-4 text-gray-300">{item.price}</p>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white mb-2" onClick={() => handlePaypalPayment(item.paypalAmount)}>
+              Pay with PayPal
+            </Button>
+            <Button className="bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => handleMpesaPayment("0703235253", item.mpesaAmount)}>
+              Pay via M-Pesa
+            </Button>
+          </div>
+        ))}
+      </section>
+
+      <section id="contact" className="bg-gray-800 p-8 mt-8 rounded-t-2xl">
+        <h2 className="text-2xl font-bold mb-4 text-teal-300">Contact Us</h2>
+        <p className="text-gray-300">Email: support@medbizresearch.com</p>
+      </section>
+
+      <footer className="bg-gray-900 p-4 text-center mt-8 text-gray-400">
+        <p className="text-sm">&copy; 2025 MedBizResearch. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+}
+
+// --- BACKEND (Node.js Express: server.js) ---
+const express = require("express");
+const axios = require("axios");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+require("dotenv").config();
+
+const app = express();
+app.use(bodyParser.json());
+app.use(cors());
+
+const consumerKey = process.env.CONSUMER_KEY;
+const consumerSecret = process.env.CONSUMER_SECRET;
+const shortcode = process.env.SHORTCODE;
+const passkey = process.env.PASSKEY;
+
+const getAccessToken = async () => {
+  const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+  const response = await axios.get(
+    "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+    { headers: { Authorization: `Basic ${auth}` } }
+  );
+  return response.data.access_token;
+};
+
+app.post("/api/mpesa", async (req, res) => {
+  const { phone, amount } = req.body;
+  const accessToken = await getAccessToken();
+  const timestamp = new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14);
+  const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString("base64");
+
+  try {
+    const stkPushResponse = await axios.post(
+      "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+      {
+        BusinessShortCode: shortcode,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: "CustomerPayBillOnline",
+        Amount: amount,
+        PartyA: phone,
+        PartyB: shortcode,
+        PhoneNumber: phone,
+        CallBackURL: "https://your-backend-url.com/callback",
+        AccountReference: "MedBizResearch",
+        TransactionDesc: "Purchase Resource"
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    res.status(200).json({ message: "STK Push initiated", data: stkPushResponse.data });
+  } catch (error) {
+    console.error(error.response?.data || error);
+    res.status(500).json({ error: "STK Push failed", details: error.response?.data || error.message });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
